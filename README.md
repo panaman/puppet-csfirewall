@@ -1,4 +1,3 @@
-puppet-csfirewall
-=================
+Requires:
+smarchive/archive
 
-ConfigServer Firewall Puppet Module

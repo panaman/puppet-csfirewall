@@ -1,0 +1,64 @@
+class csfirewall (
+  $interface = $csfirewall::params::interface,
+  $enable    = $csfirewall::params::enable,
+  $plugin    = $csfirewall::params::plugin,
+  $pm_ip     = $csfirewall::params::pm_ip,
+  $nat       = $csfirewall::params::nat,
+  $ensure_nat = $csfirewall::params::ensure_nat,
+  $geoip     = false,
+  $geo_ipv4_url = 'http://geolite.maxmind.com/download/geoip/database/GeoLiteCity.dat.gz',
+  $geo_ipv6_url = 'http://geolite.maxmind.com/download/geoip/database/GeoLiteCityv6-beta/GeoLiteCityv6.dat.gz',
+) inherits csfirewall::params {
+  if ( $enable == true ) {
+    $pkg = 'true'
+    $archive = 'present'
+  } else {
+    $pkg = 'false'
+    $archive = 'absent'
+  }
+  csfirewall::package { 'csf':
+    install_pkg => $pkg,
+    plugin      => $plugin,
+    puppet_ip   => $pm_ip,
+    archive     => $archive,
+  }
+  Class['csfirewall::nat']
+  
+  case $geoip {
+    true: {
+      include epel 
+      package { 'GeoIP':
+        ensure => present,
+        require => Yumrepo['epel'],
+      }
+      schedule { 'geodata':
+        period => monthly,
+        repeat => 1,
+      }
+      fetchfile { "GeoIP_City_v4":
+        compression     => 'gz',
+        downloadurl     => "$geo_ipv4_url",
+	downloadfile    => 'GeoLiteCity.dat.gz',
+	downloadto      => '/opt/tar/',
+	desintationpath => '/usr/share/GeoIP/',
+	destinationfile => 'GeoIP.dat',
+	owner           => 'root',
+	group           => 'root',
+	mode            => '0644',
+        schedule        => 'geodata',
+      }
+      fetchfile { "GeoIP_City_v6":
+        compression     => 'gz',
+        downloadurl     => "$geo_ipv6_url",
+        downloadfile    => 'GeoLiteCityv6.dat.gz',
+        downloadto      => '/opt/tar/',
+        desintationpath => '/usr/share/GeoIP/',
+        destinationfile => 'GeoIPv6.dat',
+        owner           => 'root',
+        group           => 'root',
+        mode            => '0644',
+        schedule        => 'geodata',
+      }
+    }
+  }
+}
